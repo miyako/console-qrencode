@@ -7,8 +7,10 @@ Contains an alternative to the "qrencode" distribtion from [libqrencode](http://
 
 In particular:
 
-The SVG output contains "xmlns:ns4d" to dictate the DPI (4D proprietary attribute).
+* The SVG output contains "xmlns:ns4d" to dictate the DPI (4D proprietary attribute).
 
-PNG output can be sent to stdout on Windows.
+* PNG output can be sent to stdout on Windows.
 
 **Note**: Because the default mode of stdout is text, LF is converted to CRLF on Windows. As a result, binary output to stdout is most probably damaged. To avoid this, ```_setmode``` is used.  [_setmode](https://msdn.microsoft.com/ja-jp/library/tw4k6df8.aspx)
+
+* Unicode file named accepted on Windows. ```_wfopen``` is used indtead of ```fopen``` [_wfopen](https://msdn.microsoft.com/ja-jp/library/yeby3zcb.aspx)
