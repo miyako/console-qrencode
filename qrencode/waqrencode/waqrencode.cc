@@ -110,6 +110,10 @@ char *getStdIn(std::string input, unsigned int *buf_size){
     return buf;
 }
 
+#ifndef __WINDOWS__ 
+#define __cdecl
+#endif
+
 int __cdecl main(int argc, char *argv[])
 {
 	int micro = 0;
@@ -286,7 +290,7 @@ int __cdecl main(int argc, char *argv[])
 void toSVG(QRcode *qr, int margin, int size, int dpi, FILE *fp)
 {
 	fprintf( fp, "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n");
-	fprintf( fp, "<svg width=\"100%%\" height=\"100%%\" viewBox=\"0 0 %d %d\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:ns4d=\"http://www.4d.com\" ns4d:DPI=\"%d\">\n", margin * 2, margin * 2, dpi);
+	fprintf( fp, "<svg width=\"100%%\" height=\"100%%\" viewBox=\"0 0 %d %d\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:ns4d=\"http://www.4d.com\" ns4d:DPI=\"%d\">\n", margin + (qr->width * size) + margin, margin + (qr->width * size) + margin, dpi);
 	fprintf( fp, "<g shape-rendering=\"crispEdges\" stroke-width=\"0\" stroke=\"none\" transform=\"translate(%d,%d)\">\n", margin, margin);
 
 	unsigned char *p;
