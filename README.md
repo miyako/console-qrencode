@@ -15,4 +15,4 @@ In particular:
 
 * Unicode file names are accepted on Windows. ```_wfopen``` is used instead of ```fopen``` [_wfopen](https://msdn.microsoft.com/ja-jp/library/yeby3zcb.aspx)
 
-* POSIX paths are accepted on Windows. (simple replacement of back slash by forward slash, for Wakanda).
+* POSIX paths are accepted on Windows. (simple replacement of back slash by forward slash).
