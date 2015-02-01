@@ -31,15 +31,21 @@
 
 enum output_type_t {
     QR_OUTPUT_PNG,
-    QR_OUTPUT_SVG
+    QR_OUTPUT_SVG,
+    QR_OUTPUT_PNG_BASE64    
 };
 
 #include <string>
+#include <vector>
 
 #define INCHES_PER_METER (100.0/2.54)
 
-void toPNG(QRcode *qr, int margin, int size, int dpi, FILE *fp);
+void toPNG(QRcode *qr, int margin, int size, int dpi, FILE *fp, bool base64 = false);
 void toSVG(QRcode *qr, int margin, int size, int dpi, FILE *fp);
+
+void printB64(std::vector<unsigned char> *png, FILE *fp);
+void write_data_fn(png_structp png_ptr, png_bytep buf, png_size_t size);
+void output_flush_fn(png_structp png_ptr);
 
 #ifndef __linux__
 #ifndef __APPLE__

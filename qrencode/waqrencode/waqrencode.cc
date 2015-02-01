@@ -11,9 +11,9 @@ static void usage(void){
 
     fprintf(stderr, " -%c: %s\n", OPT_MICRO , "micro qr code");  
     fprintf(stderr, " -%c: %s\n", OPT_KANJI , "kanji mode");  
-    fprintf(stderr, " -%c: %s\n", OPT_OUTPUT_TYPE , "output type={png, svg}");  
+    fprintf(stderr, " -%c: %s\n", OPT_OUTPUT_TYPE , "output type={png, svg, png-base64}");  
     fprintf(stderr, " -%c: %s\n", OPT_ERROR_CORRECTION_LEVEL , "error correction level={LMQH}");      
-    fprintf(stderr, " -%c: %s\n", OPT_DPI , "DPI for png={NUMBER} default 72");  
+    fprintf(stderr, " -%c: %s\n", OPT_DPI , "DPI={NUMBER} default 72");  
     fprintf(stderr, " -%c: %s\n", OPT_VERSION , "version={NUMBER}, 1<=40 (qr), 1<=4 (micro qr)");  
     fprintf(stderr, " -%c: %s\n", OPT_SIZE , "pixel size of squares={NUMBER} default 3");  
     fprintf(stderr, " -%c: %s\n", OPT_MARGIN , "pixel size of squares={NUMBER} default 0");
@@ -148,6 +148,8 @@ int __cdecl main(int argc, char *argv[])
                     type = QR_OUTPUT_PNG;
                 } else if(!strcasecmp(optarg, "svg")) {
                     type = QR_OUTPUT_SVG;
+                }else if(!strcasecmp(optarg, "png-base64")) {
+                    type = QR_OUTPUT_PNG_BASE64;
                 } else{
                     usage();
                 }                      
@@ -272,7 +274,11 @@ int __cdecl main(int argc, char *argv[])
                     
                 case QR_OUTPUT_SVG:
                     toSVG(qr, margin, size, dpi, out);
-                    break;           
+                    break;  
+                    
+                case QR_OUTPUT_PNG_BASE64:
+                    toPNG(qr, margin, size, dpi, out, true);
+                    break;      
             }  
 
 			QRcode_free(qr);
@@ -317,7 +323,7 @@ void toSVG(QRcode *qr, int margin, int size, int dpi, FILE *fp)
 	fprintf( fp, "</g>\n");
 	fprintf( fp, "</svg>\n");
 }
-void toPNG(QRcode *qr, int margin, int size, int dpi, FILE *fp)
+void toPNG(QRcode *qr, int margin, int size, int dpi, FILE *fp, bool base64)
 {
 	unsigned int fg_color[4] = {0, 0, 0, 255};
 	unsigned int bg_color[4] = {255, 255, 255, 255};
@@ -366,8 +372,14 @@ void toPNG(QRcode *qr, int margin, int size, int dpi, FILE *fp)
 	png_set_PLTE(png_ptr, info_ptr, palette, 2);
 	png_set_tRNS(png_ptr, info_ptr, alpha_values, 2, NULL);
 
-	png_init_io(png_ptr, fp);
-
+    std::vector<unsigned char> png_buf;    
+    
+    if(!base64){
+        png_init_io(png_ptr, fp);
+    }else{
+        png_set_write_fn(png_ptr, (png_voidp)&png_buf, write_data_fn, output_flush_fn);
+    }
+    
 	png_set_IHDR(png_ptr, info_ptr,
 			realwidth, realwidth,
 			1,
@@ -421,4 +433,61 @@ void toPNG(QRcode *qr, int margin, int size, int dpi, FILE *fp)
 
 	free(row);
 	free(palette);
+    
+    if(base64){
+        printB64(&png_buf, fp);
+    }
+    
 }
+
+void write_data_fn(png_structp png_ptr, png_bytep buf, png_size_t size){
+    
+    std::vector<unsigned char> *png = (std::vector<unsigned char> *)png_get_io_ptr(png_ptr);  
+    size_t p = png->size();
+    png->resize(p + size);
+    memmove(&png->at(p), buf, size);
+    
+}
+
+void output_flush_fn(png_structp png_ptr)
+{
+ 
+}
+
+static const char b64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+
+void printB64(std::vector<unsigned char> *png, FILE *fp)
+{
+    const ::std::size_t binlen = png->size();
+    
+    // Use = signs so the end is properly padded.
+    std::string retval((((binlen + 2) / 3) * 4), '=');
+    
+    ::std::size_t outpos = 0;
+    int bits_collected = 0;
+    unsigned int accumulator = 0;
+    
+    const std::vector<unsigned char>::const_iterator binend = png->end();
+    
+    for (std::vector<unsigned char>::const_iterator i = png->begin(); i != binend; ++i) {
+        accumulator = (accumulator << 8) | (*i & 0xffu);
+        bits_collected += 8;
+        while (bits_collected >= 6) {
+            bits_collected -= 6;
+            retval[outpos++] = b64_table[(accumulator >> bits_collected) & 0x3fu];
+        }
+    }
+    
+    if (bits_collected > 0) { // Any trailing bits that are missing.
+        //	assert(bits_collected < 6);
+        accumulator <<= 6 - bits_collected;
+        retval[outpos++] = b64_table[accumulator & 0x3fu];
+    }
+    
+    //	assert(outpos >= (retval.size() - 2));
+    //	assert(outpos <= retval.size());
+    
+    fprintf(fp, "data:image/png;base64,%s", retval.c_str());
+}
+
